@@ -1,46 +1,58 @@
-import java.io.IOException;
-import java.net.InetAddress;
-import java.net.ServerSocket;
-import java.net.Socket;
-import java.util.concurrent.Semaphore;
+import java.io.*;
+import java.util.*;
+import java.net.*;
 
-public class Server extends Thread{
-    private final ChannelsManager manager = new ChannelsManager();
-    public Semaphore hasConnection = new Semaphore(1);
-    private boolean works = true;
-    private ServerSocket server = new ServerSocket(28041);
-    private final boolean printing;
+// Server class 
+public class Server
+{
 
-    public Server(boolean print) throws IOException {
-        printing = print;
-    }
+    // Vector to store active clients 
+    static Vector<ClientHandler> ar = new Vector<>();
 
-    public ChannelsManager getManager() {
-        return manager;
-    }
+    // counter for clients 
+    static int i = 0;
 
-    public InetAddress getInetAddress() {
-        return server.getInetAddress();
-    }
+    public static void main(String[] args) throws IOException
+    {
+        // server is listening on port 1234 
+        ServerSocket ss = new ServerSocket(1234);
 
-    @Override
-    public void run() {
-        try {
-            hasConnection.acquire(1);
-        } catch (InterruptedException e) {
-            e.printStackTrace();
-        }
+        Socket s;
 
-        while (works) {
-            try {
-                Socket connection = server.accept();
-                Channel channel = new Channel(connection, printing);
-                manager.addChannel(connection.getInetAddress(), channel);
-                channel.start();
-                hasConnection.release(1);
-            } catch (IOException e) {
-                e.printStackTrace();
-            }
+        // running infinite loop for getting 
+        // client request 
+        while (true)
+        {
+            // Accept the incoming request 
+            s = ss.accept();
+
+            System.out.println("New client request received : " + s);
+
+            // obtain input and output streams 
+            DataInputStream dis = new DataInputStream(s.getInputStream());
+            DataOutputStream dos = new DataOutputStream(s.getOutputStream());
+
+            System.out.println("Creating a new handler for this client...");
+
+            // Create a new handler object for handling this request. 
+            ClientHandler mtch = new ClientHandler(s,"client " + i, dis, dos);
+
+            // Create a new Thread with this object. 
+            Thread t = new Thread(mtch);
+
+            System.out.println("Adding this client to active client list");
+
+            // add this client to active clients list 
+            ar.add(mtch);
+
+            // start the thread. 
+            t.start();
+
+            // increment i for new client. 
+            // i is used for naming only, and can be replaced 
+            // by any naming scheme 
+            i++;
+
         }
     }
 }
