@@ -1,20 +1,13 @@
 import java.io.Serializable;
 
-/**
- * This class represents a standard message
- */
-public class Message<T extends Serializable> implements Serializable {
-    private T content = null;
+public class Message implements Serializable {
+    private final String content;
 
-    public Message(T content) {
+    public Message(String content) {
         this.content = content;
     }
 
-    public void alter(T newContent) {
-        content = newContent;
-    }
-
-    public T getContent() {
+    public String getContent() {
         return content;
     }
 }

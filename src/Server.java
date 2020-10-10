@@ -1,90 +1,46 @@
-import java.io.*;
+import java.io.IOException;
+import java.net.InetAddress;
 import java.net.ServerSocket;
 import java.net.Socket;
-import java.util.ArrayDeque;
-import java.util.LinkedList;
-import java.util.Queue;
-import java.util.concurrent.Callable;
-import java.util.concurrent.ExecutorService;
-import java.util.concurrent.Executors;
 import java.util.concurrent.Semaphore;
 
-/**
- * Server side of the app
- */
-public class Server implements Logic {
+public class Server extends Thread{
+    private final ChannelsManager manager = new ChannelsManager();
+    public Semaphore hasConnection = new Semaphore(1);
+    private boolean works = true;
+    private ServerSocket server = new ServerSocket(28041);
+    private final boolean printing;
 
-    private final ServerSocket server;
-    private final ExecutorService executor;
+    public Server(boolean print) throws IOException {
+        printing = print;
+    }
 
-    public Server() throws IOException {
-        server = new ServerSocket(28041);
+    public ChannelsManager getManager() {
+        return manager;
+    }
 
-
-
-        executor = Executors.newFixedThreadPool(10);
+    public InetAddress getInetAddress() {
+        return server.getInetAddress();
     }
 
     @Override
-    public <T extends Serializable> T send(Message<T> message) {
-        return null;
-    }
-
-    @Override
-    public <T extends Serializable> Message<T> asyncGet(long timeout) {
-        return null;
-    }
-
-    @Override
-    public void stop() throws IOException {
-        server.close();
-        executor.shutdownNow();
-    }
-
-    @Override
-    public void start() {
-
-    }
-
-    private class Engine implements Runnable {
-
-        private final InputStreamReader reader;
-        private final OutputStreamWriter writer;
-        private final Semaphore key = new Semaphore(1);
-
-        public Engine(Socket connection) throws IOException {
-            reader = new InputStreamReader(connection.getInputStream());
-            writer = new OutputStreamWriter(connection.getOutputStream());
+    public void run() {
+        try {
+            hasConnection.acquire(1);
+        } catch (InterruptedException e) {
+            e.printStackTrace();
         }
 
-        private <T extends Serializable> Callable<T> receiveMessage() {
-            return (Callable<T>) () -> {
-
-            }
-        }
-
-        @Override
-        public void run() {
-
-        }
-    }
-
-    private class LoginService implements Runnable {
-        private final Queue<Engine> engines = new LinkedList<>();
-
-        @Override
-        public void run() {
-            while (!server.isClosed()) {
-                try {
-                    Socket connection = server.accept();
-                    Engine e = new Engine(connection);
-                    engines.add();
-
-                } catch (IOException e) {
-                    e.printStackTrace();
-                }
+        while (works) {
+            try {
+                Socket connection = server.accept();
+                Channel channel = new Channel(connection, printing);
+                manager.addChannel(connection.getInetAddress(), channel);
+                channel.start();
+                hasConnection.release(1);
+            } catch (IOException e) {
+                e.printStackTrace();
             }
         }
     }
-
 }
